@@ -1,0 +1,161 @@
+// F1: データモデル・DB構築
+// 詳細設計仕様書 4章「データモデル詳細」に対応するPrismaスキーマ。
+// テーブル定義は仕様書の各節（4-1〜4-5）に忠実に対応させている。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Prisma 7以降、接続URLはschema.prismaではなくprisma.config.tsで指定する。
+  // アプリ実行時の接続先(DATABASE_URL・pgbouncer経由のプール接続)はlib/prisma.tsの
+  // ドライバアダプタで指定し、CLI(migrate等)はprisma.config.tsのDIRECT_URLを使う。
+}
+
+// ---- Enums ----------------------------------------------------------------
+
+/// 会員種別。local_playerのみ地図・一覧に表示される（CLAUDE.md 3-3必読事項）。
+enum MemberType {
+  local_player
+  user
+
+  @@map("member_type")
+}
+
+/// プロフィール公開範囲。デフォルトpublic。
+enum Visibility {
+  public
+  followers_only
+
+  @@map("visibility")
+}
+
+/// 登録主体。運営代理登録か本人登録かの記録（F13）。
+enum RegisteredBy {
+  self
+  pathstone
+
+  @@map("registered_by")
+}
+
+/// 連絡手段の種類（F9）。
+enum ContactType {
+  email
+  line
+  sns
+  discord
+
+  @@map("contact_type")
+}
+
+// ---- Models -----------------------------------------------------------------
+
+/// 4-1. users テーブル
+model User {
+  id       String     @id @default(uuid()) @db.Uuid
+  memberType MemberType @map("member_type")
+
+  email        String @unique
+  passwordHash String @map("password_hash")
+  displayName  String @map("display_name")
+
+  // bioは3分割案（仕様書4-1推奨）を採用する。
+  activityDescription   String? @map("activity_description") @db.Text
+  challengeDescription  String? @map("challenge_description") @db.Text
+  motivationDescription String? @map("motivation_description") @db.Text
+
+  locationLabel String?  @map("location_label")
+  latitude      Float?
+  longitude     Float?
+
+  visibility   Visibility   @default(public)
+  registeredBy RegisteredBy @map("registered_by")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  contactMethods ContactMethod[]
+  categories     UserCategory[]
+
+  contactLogsAsActor  ContactLog[] @relation("ContactLogActor")
+  contactLogsAsTarget ContactLog[] @relation("ContactLogTarget")
+
+  following Follow[] @relation("Follower")
+  followers Follow[] @relation("Followee")
+
+  @@map("users")
+}
+
+/// 4-3. categories テーブル（マスタ、初期14分野）
+model Category {
+  id        String @id @default(uuid()) @db.Uuid
+  name      String @unique
+  sortOrder Int    @default(0) @map("sort_order")
+
+  users UserCategory[]
+
+  @@map("categories")
+}
+
+/// users - categories の多対多関係。
+/// 仕様書は users.category_ids(array<UUID>) と表記しているが、
+/// 参照整合性とF5のフィルタ実装のしやすさを優先し、明示的な中間テーブルとして実装する。
+model UserCategory {
+  userId     String @map("user_id") @db.Uuid
+  categoryId String @map("category_id") @db.Uuid
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([userId, categoryId])
+  @@map("user_categories")
+}
+
+/// 4-2. contact_methods テーブル（1ユーザーに複数登録可能）
+model ContactMethod {
+  id          String      @id @default(uuid()) @db.Uuid
+  userId      String      @map("user_id") @db.Uuid
+  contactType ContactType @map("contact_type")
+  value       String
+  label       String?
+  displayOrder Int?       @map("display_order")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  contactLogs ContactLog[]
+
+  @@map("contact_methods")
+}
+
+/// 4-4. follows テーブル（承認フローなし）
+model Follow {
+  id         String   @id @default(uuid()) @db.Uuid
+  followerId String   @map("follower_id") @db.Uuid
+  followeeId String   @map("followee_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  follower User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followee User @relation("Followee", fields: [followeeId], references: [id], onDelete: Cascade)
+
+  // 同じ相手を二重フォローできないようにする（仕様書に明記はないが実装上必要な制約）。
+  @@unique([followerId, followeeId])
+  @@map("follows")
+}
+
+/// 4-5. contact_logs テーブル（成功指標計測の要）
+model ContactLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  actorId         String?  @map("actor_id") @db.Uuid
+  targetId        String   @map("target_id") @db.Uuid
+  contactMethodId String   @map("contact_method_id") @db.Uuid
+  isAnonymous     Boolean  @default(false) @map("is_anonymous")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  actor  User? @relation("ContactLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+  target User  @relation("ContactLogTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  contactMethod ContactMethod @relation(fields: [contactMethodId], references: [id], onDelete: Cascade)
+
+  @@map("contact_logs")
+}
