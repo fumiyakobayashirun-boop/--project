@@ -26,7 +26,17 @@ CLAUDE.md運用ルールに従い、**1チケット＝1機能＝1回の完了確
 
 ## Day2（8/30） — 認証・登録
 
-- ⬜ **チケット02: F2 簡易ログイン・認証基盤（Supabase Auth）**
+- ✅ **チケット02: F2 簡易ログイン・認証基盤（Supabase Auth）** 10/23
+  - `users.password_hash`を削除し`auth_user_id`（auth.usersへの紐付け、null許可）を追加。マイグレーション`20261023000000_f2_supabase_auth` ✅
+  - `lib/supabase/server.ts`・`lib/supabase/proxy.ts`・`proxy.ts`（Next.js 16で middleware → proxy に改称）でセッション更新 ✅
+  - `/login`（Server Actionでログイン、エラーは日本語表示、`next`パラメータはサイト内パスのみ許可）、ヘッダーのログアウト ✅
+  - 未ログインで`/mypage`・`/admin`配下にアクセスすると`/login`へリダイレクト（proxy.tsとページ側`requireUser()`の二重チェック） ✅
+  - `/mypage`はF2確認用の仮ページ（本人編集フォームはチケット14で実装）
+  - 受け入れ条件はローカルPostgreSQL＋Supabase Auth模擬サーバーでの通し確認済み（ログイン→マイページ→ログアウト→再アクセスで弾かれる）
+  - **要対応（人間側）**：
+    1. `npm run db:migrate` でSupabase上のDBにマイグレーションを適用する
+    2. Supabaseダッシュボード > Authentication > Sign In / Providers > Email の「Confirm email」をOFFにする（仕様書F2：デモではメール確認を実装しない）
+    3. 動作確認用アカウントは、F3完成まではダッシュボード > Authentication > Users > Add user で作成する
 - ⬜ **チケット03: F3 会員登録（種別選択）**
 
 ## Day3（8/31） — 発見体験

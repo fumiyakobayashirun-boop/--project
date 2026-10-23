@@ -56,9 +56,13 @@ model User {
   id       String     @id @default(uuid()) @db.Uuid
   memberType MemberType @map("member_type")
 
-  email        String @unique
-  passwordHash String @map("password_hash")
-  displayName  String @map("display_name")
+  // F2: パスワードはSupabase Auth（auth.users）が管理するため、このテーブルには持たない
+  // （CLAUDE.md 2章：独自のパスワードハッシュ処理を書かない）。
+  // auth_user_idはauth.users.idへの紐付け。F13の代理登録では本人アカウント作成前に
+  // プロフィールだけ先に作るため、nullを許可する。
+  authUserId  String? @unique @map("auth_user_id") @db.Uuid
+  email       String  @unique
+  displayName String  @map("display_name")
 
   // bioは3分割案（仕様書4-1推奨）を採用する。
   activityDescription   String? @map("activity_description") @db.Text
