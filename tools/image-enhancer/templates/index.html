@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>画質向上ツール</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+  <h1>画質向上ツール</h1>
+  <p class="lead">PDF・画像をドロップすると高画質化します。処理はすべてこのPCの中で行われ、ファイルは外部に送信されません。</p>
+</header>
+
+<main>
+  <section class="panel settings" aria-label="補正の設定">
+    <h2>設定</h2>
+
+    <fieldset>
+      <legend>補正方式</legend>
+      <label class="choice"><input type="radio" name="mode" value="classic" checked>
+        <span><b>高速補正</b>（おすすめ）<small>文字の形を保ったまま、くっきりさせます。数秒で終わります。</small></span></label>
+      <label class="choice"><input type="radio" name="mode" value="ai">
+        <span><b>AI超解像</b><small>写真・図版向き。細部を推定して描き足します。小さな文字は形が変わることがあります。</small></span></label>
+    </fieldset>
+
+    <div class="field">
+      <label for="scale">拡大倍率</label>
+      <select id="scale" name="scale">
+        <option value="2">2倍</option>
+        <option value="3" selected>3倍（おすすめ）</option>
+        <option value="4">4倍</option>
+      </select>
+    </div>
+
+    <div class="field" id="ai-strength-field" hidden>
+      <label for="ai_strength">AIの強さ <output for="ai_strength">60%</output></label>
+      <input type="range" id="ai_strength" name="ai_strength" min="0" max="1" step="0.1" value="0.6">
+      <small>下げるほど元の字形に近くなります。</small>
+    </div>
+
+    <div class="field">
+      <label for="sharpen">シャープさ <output for="sharpen">1.0</output></label>
+      <input type="range" id="sharpen" name="sharpen" min="0" max="2" step="0.1" value="1.0">
+    </div>
+
+    <div class="field">
+      <label for="denoise">ノイズ除去</label>
+      <select id="denoise" name="denoise">
+        <option value="0">なし</option>
+        <option value="1" selected>弱（おすすめ）</option>
+        <option value="2">強（画質の荒い写真向き）</option>
+      </select>
+    </div>
+
+    <label class="check"><input type="checkbox" id="contrast" name="contrast" checked>
+      白を白く・黒を黒く（明るさ自動補正）</label>
+
+    <p class="hint">設定は、このあと追加するファイルに適用されます。</p>
+  </section>
+
+  <section class="work">
+    <label class="dropzone" id="dropzone">
+      <input type="file" id="file-input" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff">
+      <span class="dz-main">ここにPDF・画像をドラッグ&amp;ドロップ</span>
+      <span class="dz-sub">またはクリックしてファイルを選択（複数可）</span>
+    </label>
+
+    <div class="list-header" id="list-header" hidden>
+      <h2>処理結果</h2>
+      <div>
+        <button type="button" id="clear-btn" class="ghost">一覧をクリア</button>
+        <button type="button" id="zip-btn" disabled>すべてダウンロード（ZIP）</button>
+      </div>
+    </div>
+    <ul class="jobs" id="jobs"></ul>
+  </section>
+</main>
+
+<dialog id="viewer">
+  <div class="viewer-bar">
+    <strong id="viewer-title"></strong>
+    <div class="viewer-actions">
+      <label class="check"><input type="checkbox" id="actual-size">等倍で見る</label>
+      <button type="button" id="viewer-close" class="ghost">閉じる</button>
+    </div>
+  </div>
+  <p class="viewer-help">画像の上をドラッグすると境目が動きます（左：補正前／右：補正後）</p>
+  <div class="compare-scroll" id="compare-scroll">
+    <div class="compare" id="compare">
+      <img id="img-after" alt="補正後">
+      <img id="img-before" alt="補正前">
+      <div class="divider" id="divider"><span>補正前 | 補正後</span></div>
+    </div>
+  </div>
+</dialog>
+
+<template id="job-template">
+  <li class="job">
+    <div class="job-main">
+      <div class="job-name"></div>
+      <div class="job-status"></div>
+      <div class="progress"><div class="bar"></div></div>
+      <ul class="job-notes"></ul>
+    </div>
+    <div class="job-actions">
+      <button type="button" class="ghost compare-btn" hidden>比較を見る</button>
+      <a class="button download-btn" hidden>ダウンロード</a>
+    </div>
+  </li>
+</template>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

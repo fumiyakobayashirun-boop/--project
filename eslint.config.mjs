@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Next.js本体とは独立したローカルツール群
+    "tools/**",
   ]),
 ]);
 

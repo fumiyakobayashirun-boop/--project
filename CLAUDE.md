@@ -57,6 +57,7 @@
 /lib                  … Supabaseクライアント、Prismaクライアント等の初期化
 /prisma/schema.prisma … データベーススキーマ定義（詳細設計仕様書4章のテーブル定義に対応）
 /docs                 … タスク管理用チケット（00_task_list.md、01_xxx.md…）
+/tools                … Next.js本体とは独立したローカルツール（例：image-enhancer＝PDF・画像の画質向上）
 ```
 
 ---
